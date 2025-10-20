@@ -1,63 +1,39 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 session_start();
+require_once 'db_connect.php';
 
-require_once 'db_connect.php'; // your PostgreSQL connection file
-require_once 'vendor/autoload.php'; // PHPMailer
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-// Handle form POST
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $name  = trim($_POST['name']);
     $email = trim($_POST['email']);
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+    $password = $_POST['password'];
 
-    try {
-        // 1. Insert user
-        $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (:name, :email, :password) RETURNING id");
-        $stmt->execute([
-            ':name' => $name,
-            ':email' => $email,
-            ':password' => $password
-        ]);
-        $user = $stmt->fetch();
-        $userId = $user['id'];
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
+    $stmt->execute([':email' => $email]);
+    $user = $stmt->fetch();
 
-        // 2. Generate OTP
-        $otp = rand(100000, 999999);
-        $expiresAt = date("Y-m-d H:i:s", strtotime("+10 minutes"));
-
-        $stmt = $conn->prepare("INSERT INTO otp_codes (user_id, code, expires_at) VALUES (:user_id, :code, :expires_at)");
-        $stmt->execute([
-            ':user_id' => $userId,
-            ':code' => $otp,
-            ':expires_at' => $expiresAt
-        ]);
-
-        // 3. Send OTP email
-        $mail = new PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'your_email@gmail.com'; // replace
-        $mail->Password   = 'your_app_password';    // replace
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-
-        $mail->setFrom('your_email@gmail.com', 'Weston Hotel');
-        $mail->addAddress($email, $name);
-
-        $mail->isHTML(true);
-        $mail->Subject = 'Your OTP Code';
-        $mail->Body    = "<p>Dear $name,</p><p>Your OTP code is: <b>$otp</b></p><p>This code will expire in 10 minutes.</p>";
-
-        $mail->send();
-
-        $_SESSION['message'] = "Signup successful! Check your email for OTP.";
-        header("Location: verify.php?user_id=$userId");
-        exit;
-    } catch (Exception $e) {
-        echo "❌ Error: " . $e->getMessage();
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['name'] = $user['name'];
+        echo "✅ Welcome, " . htmlspecialchars($user['name']) . "!<br>";
+        echo "<a href='logout.php'>Logout</a>";
+        // header("Location: dashboard.php");
+    } else {
+        echo "❌ Invalid email or password.<br>";
+        echo "<a href='signup.php'>Create an account</a>";
     }
 }
+?>
+
+<!-- HTML Login Form -->
+<form method="POST" style="max-width:400px;margin:40px auto;border:1px solid #ccc;padding:20px;border-radius:8px;">
+    <h2>Login</h2>
+    <label>Email:</label><br>
+    <input type="email" name="email" required style="width:100%;padding:8px;margin:5px 0;"><br>
+
+    <label>Password:</label><br>
+    <input type="password" name="password" required style="width:100%;padding:8px;margin:5px 0;"><br>
+
+    <button type="submit" style="background:#007bff;color:white;padding:10px 15px;border:none;border-radius:5px;">Login</button>
+    <p>Don't have an account? <a href="signup.php">Sign Up</a></p>
+</form>
