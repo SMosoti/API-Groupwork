@@ -19,7 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $check = $conn->prepare("SELECT id FROM users WHERE email = :email");
         $check->execute([':email' => $email]);
         if ($check->fetch()) {
-            echo "❌ Account already exists. <a href='login.php'>Login instead</a>";
+            echo "<div class='error-msg'>❌ Account already exists. <a href='login.php'>Login instead</a></div>";
             exit;
         }
 
@@ -71,23 +71,133 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit;
 
     } catch (Exception $e) {
-        echo "❌ Error: " . $e->getMessage();
+        echo "<div class='error-msg'>❌ Error: " . htmlspecialchars($e->getMessage()) . "</div>";
     }
 }
 ?>
 
-<!-- HTML Signup Form -->
-<form method="POST" style="max-width:400px;margin:40px auto;border:1px solid #ccc;padding:20px;border-radius:8px;">
-    <h2>Sign Up</h2>
-    <label>Name:</label><br>
-    <input type="text" name="name" required style="width:100%;padding:8px;margin:5px 0;"><br>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | Weston Hotel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(to right, #d0eaff, #eaf6ff);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    <label>Email:</label><br>
-    <input type="email" name="email" required style="width:100%;padding:8px;margin:5px 0;"><br>
+        form {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 420px;
+        }
 
-    <label>Password:</label><br>
-    <input type="password" name="password" required style="width:100%;padding:8px;margin:5px 0;"><br>
+        h2 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
 
-    <button type="submit" style="background:#007bff;color:white;padding:10px 15px;border:none;border-radius:5px;">Sign Up</button>
-    <p>Already have an account? <a href="login.php">Login</a></p>
-</form>
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 16px 0;
+            border: 1px solid #bcdcff;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0,123,255,0.3);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #005ecb;
+        }
+
+        p {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .error-msg, .success-msg {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px auto;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .success-msg {
+            background: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <form method="POST">
+        <h2>Create Account</h2>
+
+        <label>Name</label><br>
+        <input type="text" name="name" required><br>
+
+        <label>Email</label><br>
+        <input type="email" name="email" required><br>
+
+        <label>Password</label><br>
+        <input type="password" name="password" required><br>
+
+        <button type="submit">Sign Up</button>
+        <p>Already have an account? <a href="login.php">Login</a></p>
+    </form>
+</body>
+</html>
