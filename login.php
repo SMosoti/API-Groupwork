@@ -1,39 +1,57 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 session_start();
-require_once 'db_connect.php';
-
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
-
-    $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
-    $stmt->execute([':email' => $email]);
-    $user = $stmt->fetch();
-
-    if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['name'] = $user['name'];
-        echo "✅ Welcome, " . htmlspecialchars($user['name']) . "!<br>";
-        echo "<a href='logout.php'>Logout</a>";
-        // header("Location: dashboard.php");
-    } else {
-        echo "❌ Invalid email or password.<br>";
-        echo "<a href='signup.php'>Create an account</a>";
-    }
+if(isset($_SESSION['user_id'])){
+    header('Location: ' . ($_SESSION['role']==='admin' ? 'admin_dashboard.php' : 'view_room.php'));
+    exit;
 }
 ?>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Login | Weston Hotel</title>
+<style>
+body{font-family:Poppins, sans-serif;background:linear-gradient(135deg,#0d47a1,#42a5f5);display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#fff}
+.box{background:#fff;color:#0d47a1;padding:28px;border-radius:12px;width:380px;box-shadow:0 6px 20px rgba(0,0,0,0.15)}
+input{width:100%;padding:10px;margin:8px 0;border:1px solid #d3e7ff;border-radius:8px}
+button{width:100%;padding:10px;background:#0d47a1;border:none;color:#fff;border-radius:8px;cursor:pointer}
+.toggle{color:#0d47a1;text-align:center;margin-top:10px;cursor:pointer}
+.note{font-size:13px;color:#666;margin-top:6px}
+a{color:#0d47a1}
+</style>
+</head>
+<body>
+<div class="box">
+  <h2 id="title">Login</h2>
+  <form id="mainForm" method="POST" action="verify_login.php">
+    <input type="hidden" name="action" id="action" value="login">
+    <input type="text" name="name" id="name" placeholder="Full Name" style="display:none">
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button type="submit" id="submitBtn">Login</button>
+  </form>
+  <div class="toggle" onclick="toggle()">New user? Create an account</div>
+  <div class="note"><a href="reset_password.php">Forgot password?</a></div>
+</div>
 
-<!-- HTML Login Form -->
-<form method="POST" style="max-width:400px;margin:40px auto;border:1px solid #ccc;padding:20px;border-radius:8px;">
-    <h2>Login</h2>
-    <label>Email:</label><br>
-    <input type="email" name="email" required style="width:100%;padding:8px;margin:5px 0;"><br>
-
-    <label>Password:</label><br>
-    <input type="password" name="password" required style="width:100%;padding:8px;margin:5px 0;"><br>
-
-    <button type="submit" style="background:#007bff;color:white;padding:10px 15px;border:none;border-radius:5px;">Login</button>
-    <p>Don't have an account? <a href="signup.php">Sign Up</a></p>
-</form>
+<script>
+function toggle(){
+  const action = document.getElementById('action');
+  const name = document.getElementById('name');
+  const title = document.getElementById('title');
+  const btn = document.getElementById('submitBtn');
+  if(action.value === 'login'){
+    action.value = 'register';
+    name.style.display = 'block';
+    title.innerText = 'Register';
+    btn.innerText = 'Register';
+  } else {
+    action.value = 'login';
+    name.style.display = 'none';
+    title.innerText = 'Login';
+    btn.innerText = 'Login';
+  }
+}
+</script>
+</body>
+</html>

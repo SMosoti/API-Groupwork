@@ -1,93 +1,59 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 session_start();
+require 'db_connect.php';
+require 'mail.php'; // PHPMailer setup
 
-require_once 'db_connect.php';
-require_once 'vendor/autoload.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    
+    // Check if email exists
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email=:email");
+    $stmt->execute([':email'=>$email]);
+    if($stmt->rowCount()>0){
+        $error = "Email already registered.";
+    } else {
+        $otp_code = rand(100000,999999); // 6-digit OTP
+        $stmt = $conn->prepare("INSERT INTO users (name,email,password,role,otp_verified,otp_code) VALUES (:name,:email,:password,'client',0,:otp_code)");
+        $stmt->execute([':name'=>$name, ':email'=>$email, ':password'=>$password, ':otp_code'=>$otp_code]);
 
-    try {
-        // Check if user already exists
-        $check = $conn->prepare("SELECT id FROM users WHERE email = :email");
-        $check->execute([':email' => $email]);
-        if ($check->fetch()) {
-            echo "❌ Account already exists. <a href='login.php'>Login instead</a>";
+        // Send OTP
+        $mail->addAddress($email);
+        $mail->Subject = "Verify Your Email - Weston Hotel";
+        $mail->Body = "Hello $name! Your verification OTP is: $otp_code";
+        if($mail->send()){
+            $_SESSION['email'] = $email;
+            header("Location: verify_otp.php");
             exit;
+        } else {
+            $error = "Could not send OTP email.";
         }
-
-        // Insert new user
-        $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (:name, :email, :password) RETURNING id");
-        $stmt->execute([
-            ':name' => $name,
-            ':email' => $email,
-            ':password' => $password
-        ]);
-        $user = $stmt->fetch();
-        $userId = $user['id'];
-
-        // Generate OTP
-        $otp = rand(100000, 999999);
-        $expiresAt = date("Y-m-d H:i:s", strtotime("+10 minutes"));
-
-        $stmt = $conn->prepare("INSERT INTO otp_codes (user_id, code, expires_at, used) 
-                                VALUES (:user_id, :code, :expires_at, FALSE)");
-        $stmt->execute([
-            ':user_id' => $userId,
-            ':code' => $otp,
-            ':expires_at' => $expiresAt
-        ]);
-
-        // Send OTP Email
-        $mail = new PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'your_email@gmail.com'; // change
-        $mail->Password   = 'your_app_password';    // change (use app password)
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-
-        $mail->setFrom('your_email@gmail.com', 'Weston Hotel');
-        $mail->addAddress($email, $name);
-
-        $mail->isHTML(true);
-        $mail->Subject = 'Your OTP Code';
-        $mail->Body    = "<p>Dear $name,</p>
-                          <p>Your OTP code is: <b>$otp</b></p>
-                          <p>This code expires in 10 minutes.</p>";
-
-        $mail->send();
-
-        $_SESSION['signup_user_id'] = $userId;
-        header("Location: verify.php");
-        exit;
-
-    } catch (Exception $e) {
-        echo "❌ Error: " . $e->getMessage();
     }
 }
 ?>
-
-<!-- HTML Signup Form -->
-<form method="POST" style="max-width:400px;margin:40px auto;border:1px solid #ccc;padding:20px;border-radius:8px;">
-    <h2>Sign Up</h2>
-    <label>Name:</label><br>
-    <input type="text" name="name" required style="width:100%;padding:8px;margin:5px 0;"><br>
-
-    <label>Email:</label><br>
-    <input type="email" name="email" required style="width:100%;padding:8px;margin:5px 0;"><br>
-
-    <label>Password:</label><br>
-    <input type="password" name="password" required style="width:100%;padding:8px;margin:5px 0;"><br>
-
-    <button type="submit" style="background:#007bff;color:white;padding:10px 15px;border:none;border-radius:5px;">Sign Up</button>
-    <p>Already have an account? <a href="login.php">Login</a></p>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Sign Up | Weston Hotel</title>
+<style>
+body { font-family:'Poppins',sans-serif; background:#f5f8ff; display:flex; justify-content:center; align-items:center; height:100vh; }
+form { background:white; padding:30px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); width:300px; }
+input, button { width:100%; padding:10px; margin:8px 0; border-radius:5px; border:1px solid #ccc; }
+button { background:#007bff; color:white; border:none; cursor:pointer; }
+button:hover { background:#0056b3; }
+.error { color:red; font-size:14px; }
+</style>
+</head>
+<body>
+<form method="POST">
+<h3>Sign Up</h3>
+<input type="text" name="name" placeholder="Full Name" required>
+<input type="email" name="email" placeholder="Email" required>
+<input type="password" name="password" placeholder="Password" required>
+<?php if(isset($error)) echo "<div class='error'>$error</div>"; ?>
+<button type="submit">Sign Up</button>
+<p>Already have an account? <a href="login.php">Login</a></p>
 </form>
+</body>
+</html>

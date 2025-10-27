@@ -2,14 +2,14 @@
 session_start();
 require_once 'db_connect.php';
 
-// Ensure a reset request exists
-if (!isset($_SESSION['reset_user_id'])) {
-    die("❌ No reset request found. Please request again.");
+// Ensure a signup request exists
+if (!isset($_SESSION['signup_user_id'])) {
+    die("❌ No signup request found. Please sign up again.");
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $otp = trim($_POST['otp']);
-    $user_id = $_SESSION['reset_user_id'];
+    $user_id = $_SESSION['signup_user_id'];
 
     // Fetch latest OTP for this user
     $stmt = $conn->prepare("SELECT * FROM otp_codes 
@@ -33,10 +33,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $update = $conn->prepare("UPDATE otp_codes SET used = TRUE WHERE id = :id");
             $update->execute([':id' => $otpRow['id']]);
 
-            // Allow password reset
-            $_SESSION['otp_verified'] = true;
-            header("Location: reset_password.php");
-            exit;
+            echo "✅ OTP verified successfully! Your account is now active. <a href='login.php'>Login here</a>";
+
+            // Clean session
+            unset($_SESSION['signup_user_id']);
         }
     } else {
         echo "❌ Invalid OTP. Try again.";
@@ -45,8 +45,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 ?>
 
 <!-- OTP Input Form -->
-<form method="POST">
+<form method="POST" style="max-width:400px;margin:40px auto;border:1px solid #ccc;padding:20px;border-radius:8px;">
+    <h2>Enter OTP</h2>
     <label>Enter the OTP sent to your email:</label><br>
-    <input type="text" name="otp" maxlength="6" required>
-    <button type="submit">Verify OTP</button>
+    <input type="text" name="otp" maxlength="6" required style="width:100%;padding:8px;margin:5px 0;"><br>
+    <button type="submit" style="background:#007bff;color:white;padding:10px 15px;border:none;border-radius:5px;">Verify OTP</button>
 </form>
