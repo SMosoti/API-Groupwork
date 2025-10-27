@@ -1,5 +1,6 @@
 <?php
 session_start();
+
 if(isset($_SESSION['user_id'])){
     header('Location: ' . ($_SESSION['role']==='admin' ? 'admin_dashboard.php' : 'view_room.php'));
     exit;
